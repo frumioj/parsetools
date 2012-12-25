@@ -452,7 +452,7 @@ parse_rules(_, {ok,_,L}, _, St) ->
 parse_rules(_, {eof,L}, _, St) ->
     add_error({L,leex,missing_rules}, St).
 
-%% parse_rules(File, Result, Macros, RegExpActions, Actions, Acount, State) ->
+%% parse_rules(File, Result, Macros, RegExpActions, Actions, Account, State) ->
 %%      {ok,NextCLine,RegExpActions,Actions,NewState} | throw(NewState)
 
 parse_rules(Ifile, NextLine, Ms, REAs, As, N, St) ->
@@ -508,7 +508,7 @@ collect_action(Ifile, Chars, L0, Cont0) ->
 
 %% parse_rule(RegExpString, RegExpLine, ActionTokens, Macros, Counter, State) ->
 %%      {ok,{RE,Action},ActionData,State}.
-%%  Parse one regexp after performing macro substition.
+%%  Parse one regexp after performing macro substitution.
 
 parse_rule(S, Line, [{dot,_}], Ms, N, St) ->
     case parse_rule_regexp(S, Ms, St) of
