@@ -406,7 +406,7 @@ parse_file(St0) ->
                 {ok,Code,St4} = parse_code(Xfile, Line3, St3),
                 verbose_print(St1, "contained ~w rules.~n", [length(REAs)]),
                 {ok,REAs,Actions,Code,St4}
-            after file:close(Xfile)
+            after ok = file:close(Xfile)
             end;
         {error,Error} ->
             add_error({none,leex,{file_error,Error}}, St0)
@@ -1295,13 +1295,13 @@ out_file(St0, DFA, DF, Actions, Code) ->
                                      Code, 1),
                             verbose_print(St0, "ok~n", []),
                             St0
-                        after file:close(Ofile)
+                        after ok = file:close(Ofile)
                         end;
                     {error,Error} ->
                         verbose_print(St0, "error~n", []),
                         add_error({none,leex,{file_error,Error}}, St0)
                 end
-            after file:close(Ifile)
+            after ok = file:close(Ifile)
             end;
         {{error,Error},Ifile} ->
             add_error(Ifile, {none,leex,{file_error,Error}}, St0)
@@ -1346,12 +1346,11 @@ out_erlang_code(File, St, Code, L) ->
     {CodeL,CodePos,_NCodeLines} = Code,
     output_file_directive(File, St#leex.xfile, CodeL),
     {ok,Xfile} = file:open(St#leex.xfile, [read]),
-    try
-        {ok,_} = file:position(Xfile, CodePos),
-        {ok,_} = file:copy(Xfile, File)
-    after
-        file:close(Xfile)
-    end,
+    _ = try
+            {ok,_} = file:position(Xfile, CodePos),
+            {ok,_} = file:copy(Xfile, File)
+        after ok = file:close(Xfile)
+        end,
     io:nl(File),
     output_file_directive(File, St#leex.ifile, L).
 
@@ -1569,7 +1568,7 @@ out_dfa_graph(St, DFA, DF) ->
                 io:fwrite(Gfile, "}~n", []),
                 verbose_print(St, "ok~n", []),
                 St
-            after file:close(Gfile)
+            after ok = file:close(Gfile)
             end;
         {error,Error} ->
             verbose_print(St, "error~n", []),
