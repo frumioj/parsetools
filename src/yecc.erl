@@ -132,7 +132,7 @@
 
 %%% Interface to erl_compile.
 
-compile(Input0, Output0, 
+compile(Input0, Output0,
         #options{warning = WarnLevel, verbose=Verbose, includes=Includes,
 		 specific=Specific}) ->
     Input = shorten_filename(Input0),
@@ -152,13 +152,13 @@ compile(Input0, Output0,
 format_error(bad_declaration) ->
     io_lib:fwrite("unknown or bad declaration, ignored", []);
 format_error({bad_expect, SymName}) ->
-    io_lib:fwrite("argument ~s of Expect is not an integer", 
+    io_lib:fwrite("argument ~s of Expect is not an integer",
                   [format_symbol(SymName)]);
 format_error({bad_rootsymbol, SymName}) ->
-    io_lib:fwrite("rootsymbol ~s is not a nonterminal", 
+    io_lib:fwrite("rootsymbol ~s is not a nonterminal",
                   [format_symbol(SymName)]);
 format_error({bad_states, SymName}) ->
-    io_lib:fwrite("argument ~s of States is not an integer", 
+    io_lib:fwrite("argument ~s of States is not an integer",
                   [format_symbol(SymName)]);
 format_error({conflict, Conflict}) ->
     format_conflict(Conflict);
@@ -167,19 +167,19 @@ format_error({conflicts, SR, RR}) ->
 format_error({duplicate_declaration, Tag}) ->
     io_lib:fwrite("duplicate declaration of ~s", [atom_to_list(Tag)]);
 format_error({duplicate_nonterminal, Nonterminal}) ->
-    io_lib:fwrite("duplicate non-terminals ~s", 
+    io_lib:fwrite("duplicate non-terminals ~s",
                   [format_symbol(Nonterminal)]);
 format_error({duplicate_precedence, Op}) ->
-    io_lib:fwrite("duplicate precedence operator ~s", 
+    io_lib:fwrite("duplicate precedence operator ~s",
                   [format_symbol(Op)]);
 format_error({duplicate_terminal, Terminal}) ->
-    io_lib:fwrite("duplicate terminal ~s", 
+    io_lib:fwrite("duplicate terminal ~s",
                   [format_symbol(Terminal)]);
 format_error({endsymbol_is_nonterminal, Symbol}) ->
-    io_lib:fwrite("endsymbol ~s is a nonterminal", 
+    io_lib:fwrite("endsymbol ~s is a nonterminal",
                   [format_symbol(Symbol)]);
 format_error({endsymbol_is_terminal, Symbol}) ->
-    io_lib:fwrite("endsymbol ~s is a terminal", 
+    io_lib:fwrite("endsymbol ~s is a terminal",
                   [format_symbol(Symbol)]);
 format_error({error, Module, Error}) ->
     Module:format_error(Error);
@@ -220,10 +220,10 @@ format_error({undefined_pseudo_variable, Atom}) ->
 format_error({undefined_symbol, SymName}) ->
     io_lib:fwrite("undefined rhs symbol ~s", [format_symbol(SymName)]);
 format_error({unused_nonterminal, Nonterminal}) ->
-    io_lib:fwrite("non-terminal symbol ~s not used", 
+    io_lib:fwrite("non-terminal symbol ~s not used",
                   [format_symbol(Nonterminal)]);
 format_error({unused_terminal, Terminal}) ->
-    io_lib:fwrite("terminal symbol ~s not used", 
+    io_lib:fwrite("terminal symbol ~s not used",
                   [format_symbol(Terminal)]).
 
 file(File) ->
@@ -242,7 +242,7 @@ file(File, Options) ->
             Flag = process_flag(trap_exit, false),
             Pid = spawn_link(fun() -> infile(Self, File, OptionValues) end),
             receive
-                {Pid, Rep} -> 
+                {Pid, Rep} ->
                     receive after 1 -> ok end,
                     process_flag(trap_exit, Flag),
                     Rep
@@ -258,8 +258,8 @@ yecc(Infile, Outfile, Verbose) ->
 
 yecc(Infilex, Outfilex, Verbose, Includefilex) ->
     statistics(runtime),
-    case file(Infilex, [{parserfile, Outfilex}, 
-                        {verbose, Verbose}, 
+    case file(Infilex, [{parserfile, Outfilex},
+                        {verbose, Verbose},
                         {report, true},
                         {includefile, Includefilex}]) of
         {ok, _File} ->
@@ -273,14 +273,14 @@ yecc(Infilex, Outfilex, Verbose, Includefilex) ->
 %%%
 
 options(Options0) when is_list(Options0) ->
-    try 
+    try
         Options = flatmap(fun(return) -> short_option(return, true);
                              (report) -> short_option(report, true);
                              ({return,T}) -> short_option(return, T);
                              ({report,T}) -> short_option(report, T);
                              (T) -> [T]
                           end, Options0),
-        options(Options, [file_attributes, includefile, parserfile, 
+        options(Options, [file_attributes, includefile, parserfile,
                           report_errors, report_warnings, warnings_as_errors,
                           return_errors, return_warnings, time, verbose], [])
     catch error: _ -> badarg
@@ -295,7 +295,7 @@ short_option(report, T) ->
 
 options(Options0, [Key | Keys], L) when is_list(Options0) ->
     Options = case member(Key, Options0) of
-                  true -> 
+                  true ->
                       [atom_option(Key) | delete(Key, Options0)];
                   false ->
                       Options0
@@ -304,9 +304,9 @@ options(Options0, [Key | Keys], L) when is_list(Options0) ->
             {Key, Filename0} when Key =:= includefile;
                                   Key =:= parserfile ->
                 case is_filename(Filename0) of
-                    no -> 
+                    no ->
                         badarg;
-                    Filename -> 
+                    Filename ->
                         {ok, [{Key, Filename}]}
                 end;
             {Key, Bool} = KB when is_boolean(Bool) ->
@@ -355,7 +355,7 @@ atom_option(Key) -> Key.
 is_filename(T) ->
     try filename:flatten(T)
     catch error: _ -> no
-    end.    
+    end.
 
 shorten_filename(Name0) ->
     {ok,Cwd} = file:get_cwd(),
@@ -383,7 +383,7 @@ start(Infilex, Options) ->
     IncludefileVersion = includefile_version(Includefile),
     Outfile = assure_extension(Outfilex, ".erl"),
     Module = list_to_atom(filename:basename(Outfile, ".erl")),
-    #yecc{infile = Infile, 
+    #yecc{infile = Infile,
           outfile = Outfile,
           includefile = Includefile,
           includefile_version = IncludefileVersion,
@@ -406,7 +406,7 @@ infile(Parent, Infilex, Options) ->
     St0 = start(Infilex, Options),
     St = case file:open(St0#yecc.infile, [read, read_ahead]) of
              {ok, Inport} ->
-                 try 
+                 try
                      outfile(St0#yecc{inport = Inport})
                  after
                      ok = file:close(Inport)
@@ -427,9 +427,9 @@ werror(St) ->
 outfile(St0) ->
     case file:open(St0#yecc.outfile, [write, delayed_write]) of
         {ok, Outport} ->
-            try 
+            try
                 generate(St0#yecc{outport = Outport, line = 1})
-            catch 
+            catch
                 throw: St1  ->
                     St1;
                 exit: Reason ->
@@ -448,18 +448,18 @@ os_process_size() ->
             list_to_integer(lib:nonl(Size));
         _ ->
             0
-    end.            
+    end.
 
 timeit(Name, Fun, St0) ->
     Time = runtime,
     %% Time = wall_clock,
     {Before, _} = statistics(Time),
-    St = Fun(St0), 
+    St = Fun(St0),
     {After, _} = statistics(Time),
     Mem0 = erts_debug:flat_size(St)*erlang:system_info(wordsize),
     Mem = lists:flatten(io_lib:format("~.1f kB", [Mem0/1024])),
     Sz = lists:flatten(io_lib:format("~.1f MB", [os_process_size()/1024])),
-    io:fwrite(" ~-30w: ~10.2f s ~12s ~10s\n", 
+    io:fwrite(" ~-30w: ~10.2f s ~12s ~10s\n",
               [Name, (After-Before)/1000, Mem, Sz]),
     St.
 
@@ -470,8 +470,8 @@ generate(St0) ->
               ?PASS(states_and_goto_table), ?PASS(parse_actions),
               ?PASS(action_conflicts), ?PASS(write_file)],
     F = case member(time, St0#yecc.options) of
-            true -> 
-                io:fwrite(<<"Generating parser from grammar in ~s\n">>, 
+            true ->
+                io:fwrite(<<"Generating parser from grammar in ~s\n">>,
                           [format_filename(St0#yecc.infile)]),
                 fun timeit/3;
             false ->
@@ -479,7 +479,7 @@ generate(St0) ->
         end,
     Fun = fun({Name, Fun}, St) ->
                   St2 = F(Name, Fun, St),
-                  if 
+                  if
                       St2#yecc.errors =:= [] -> St2;
                       true -> throw(St2)
                   end
@@ -498,7 +498,7 @@ parse_grammar(eof, _Inport, _NextLine, St) ->
 parse_grammar({#symbol{name = 'Header'}, Ss}, Inport, NextLine, St0) ->
     St1 = St0#yecc{header = [S || {string,_,S} <- Ss]},
     parse_grammar(Inport, NextLine, St1);
-parse_grammar({#symbol{name = 'Erlang'}, [#symbol{name = code}]}, _Inport, 
+parse_grammar({#symbol{name = 'Erlang'}, [#symbol{name = code}]}, _Inport,
               NextLine, St) ->
     St#yecc{erlang_code = NextLine};
 parse_grammar(Grammar, Inport, NextLine, St0) ->
@@ -516,9 +516,9 @@ parse_grammar({rule, Rule, Tokens}, St0) ->
     {Tokens1, St} = subst_pseudo_vars(Tokens,
                                       NmbrOfDaughters,
                                       St0),
-    RuleDef = #rule{symbols = Rule, 
-                    tokens = Tokens1, 
-                    is_guard = IsGuard, 
+    RuleDef = #rule{symbols = Rule,
+                    tokens = Tokens1,
+                    is_guard = IsGuard,
                     is_well_formed = IsWellFormed},
     St#yecc{rules_list = [RuleDef | St#yecc.rules_list]};
 parse_grammar({prec, Prec}, St) ->
@@ -526,9 +526,9 @@ parse_grammar({prec, Prec}, St) ->
 parse_grammar({#symbol{line = Line, name = Name}, Symbols}, St) ->
     CF = fun(I) ->
                  case element(I, St) of
-                     [] -> 
+                     [] ->
                          setelement(I, St, Symbols);
-                     _ -> 
+                     _ ->
                          add_error(Line, {duplicate_declaration, Name}, St)
                  end
          end,
@@ -555,19 +555,19 @@ read_grammar(Inport, Line) ->
                                {error, ErrorLine, {error, Mod, Message}};
                            {ok, {rule, Rule, {erlang_code, Tokens}}} ->
                                {rule, Rule, Tokens};
-                           {ok, {#symbol{name=P}, 
+                           {ok, {#symbol{name=P},
                                  [#symbol{name=I} | OpL]}=Ss} ->
                                A = precedence(P),
                                if
-                                   A =/= unknown, 
+                                   A =/= unknown,
                                    is_integer(I),
                                    OpL =/= [] ->
                                        Ps = [{Op, I , A} || Op <- OpL],
                                        {prec, Ps};
-                                   true -> 
+                                   true ->
                                        Ss
                                end;
-                           {ok, Ss} -> 
+                           {ok, Ss} ->
                                Ss
                        end}
     end.
@@ -584,14 +584,14 @@ check_grammar(St0) ->
     Empty = #symbol{line = none, name = '$empty'},
     AllSymbols = St0#yecc.nonterminals ++ St0#yecc.terminals ++ [Empty],
     St1 = St0#yecc{all_symbols = AllSymbols},
-    Cs = [fun check_nonterminals/1, fun check_terminals/1, 
-          fun check_rootsymbol/1, fun check_endsymbol/1, 
+    Cs = [fun check_nonterminals/1, fun check_terminals/1,
+          fun check_rootsymbol/1, fun check_endsymbol/1,
           fun check_expect/1, fun check_states/1,
           fun check_precedences/1, fun check_rules/1],
     foldl(fun(F, St) -> F(St) end, St1, Cs).
 
 check_nonterminals(St) ->
-    case St#yecc.nonterminals of 
+    case St#yecc.nonterminals of
         [] ->
             add_error(nonterminals_missing, St);
         Nonterminals ->
@@ -668,7 +668,7 @@ check_states(St) ->
     end.
 
 check_precedences(St0) ->
-    {St1, _} = 
+    {St1, _} =
         foldr(fun({#symbol{line = Line, name = Op},_I,_A}, {St,Ps}) ->
                       case member(Op, Ps) of
                           true ->
@@ -684,7 +684,7 @@ check_precedences(St0) ->
                           add_error(Line,{precedence_op_is_endsymbol,Op}, St);
                       unknown ->
                           add_error(Line, {precedence_op_is_unknown, Op}, St);
-                      _ -> 
+                      _ ->
                           St#yecc{prec = [{Op,I,A} | St#yecc.prec]}
                   end
           end, St1#yecc{prec = []}, St1#yecc.prec).
@@ -693,7 +693,7 @@ check_rule(Rule0, {St0,Rules}) ->
     Symbols = Rule0#rule.symbols,
     #symbol{line = HeadLine, name = Head} = hd(Symbols),
     case member(Head, St0#yecc.nonterminals) of
-        false -> 
+        false ->
             {add_error(HeadLine, {undefined_nonterminal, Head}, St0), Rules};
         true ->
             St = check_rhs(tl(Symbols), St0),
@@ -707,7 +707,7 @@ check_rules(St0) ->
         [] ->
             add_error(no_grammar_rules, St);
         _ ->
-            Rule = #rule{line = none, 
+            Rule = #rule{line = none,
                          symbols = [?ACCEPT, St#yecc.rootsymbol],
                          tokens = []},
             Rules1 = [Rule | Rules0],
@@ -759,7 +759,7 @@ write_file(St0) ->
     #yecc{infile = Infile, outfile = Outfile,
           inport = Inport, outport = Outport,
           nonterminals = Nonterminals} = St0,
-    {St10, N_lines, LastErlangCodeLine} = 
+    {St10, N_lines, LastErlangCodeLine} =
         output_prelude(Outport, Inport, St0),
     St20 = St10#yecc{line = St10#yecc.line + N_lines},
     St25 = nl(St20),
@@ -787,15 +787,15 @@ yecc_ret(St0) ->
     Es = pack_errors(St#yecc.errors),
     Ws = pack_warnings(St#yecc.warnings),
     Werror = werror(St),
-    if 
+    if
         Werror ->
             do_error_return(St, Es, Ws);
-        Es =:= [] -> 
+        Es =:= [] ->
             case member(return_warnings, St#yecc.options) of
                 true -> {ok, St#yecc.outfile, Ws};
                 false -> {ok, St#yecc.outfile}
             end;
-        true -> 
+        true ->
             do_error_return(St, Es, Ws)
     end.
 
@@ -831,7 +831,7 @@ pack_errors([{File,_} | _] = Es) ->
     [{File, flatmap(fun({_,E}) -> [E] end, sort(Es))}];
 pack_errors([]) ->
     [].
-    
+
 pack_warnings([{File,_} | _] = Ws) ->
     [{File, flatmap(fun({_,W}) -> [W] end, sort(Ws))}];
 pack_warnings([]) ->
@@ -840,14 +840,14 @@ pack_warnings([]) ->
 report_errors(St) ->
     case member(report_errors, St#yecc.options) of
         true ->
-            foreach(fun({File,{none,Mod,E}}) -> 
-                            io:fwrite(<<"~s: ~s\n">>, 
+            foreach(fun({File,{none,Mod,E}}) ->
+                            io:fwrite(<<"~s: ~s\n">>,
                                       [File,Mod:format_error(E)]);
-                       ({File,{Line,Mod,E}}) -> 
-                            io:fwrite(<<"~s:~w: ~s\n">>, 
+                       ({File,{Line,Mod,E}}) ->
+                            io:fwrite(<<"~s:~w: ~s\n">>,
                                       [File,Line,Mod:format_error(E)])
                     end, sort(St#yecc.errors));
-        false -> 
+        false ->
             ok
     end.
 
@@ -860,16 +860,16 @@ report_warnings(St) ->
     ReportWerror = Werror andalso member(report_errors, St#yecc.options),
     case member(report_warnings, St#yecc.options) orelse ReportWerror of
         true ->
-            foreach(fun({File,{none,Mod,W}}) -> 
+            foreach(fun({File,{none,Mod,W}}) ->
                             io:fwrite(<<"~s: ~s~s\n">>,
                                       [File,Prefix,
 				       Mod:format_error(W)]);
-                       ({File,{Line,Mod,W}}) -> 
+                       ({File,{Line,Mod,W}}) ->
                             io:fwrite(<<"~s:~w: ~s~s\n">>,
                                       [File,Line,Prefix,
 				       Mod:format_error(W)])
                     end, sort(St#yecc.warnings));
-        false -> 
+        false ->
             ok
     end.
 
@@ -880,7 +880,7 @@ add_error(Line, E, St) ->
     add_error(St#yecc.infile, Line, E, St).
 
 add_error(File, Line, E, St) ->
-    St#yecc{errors = [{File,{Line,?MODULE,E}}|St#yecc.errors]}.    
+    St#yecc{errors = [{File,{Line,?MODULE,E}}|St#yecc.errors]}.
 
 add_errors(SymNames, E0, St0) ->
     foldl(fun(SymName, St) ->
@@ -904,9 +904,9 @@ check_rhs(Rhs, St0) ->
         false ->
             foldl(fun(Sym, St) ->
                           case symbol_member(Sym, St#yecc.all_symbols) of
-                              true -> 
+                              true ->
                                   St;
-                              false -> 
+                              false ->
                                   E = {undefined_symbol,Sym#symbol.name},
                                   add_error(Sym#symbol.line, E, St)
                           end
@@ -942,10 +942,10 @@ subst_pseudo_vars({atom, Line, Atom}, NmbrOfDaughters, St0) ->
                 N when N > 0, N =< NmbrOfDaughters ->
                     {{var, Line, list_to_atom(append("__", Rest))}, St0};
                 _ ->
-                    St = add_error(Line, {undefined_pseudo_variable, Atom}, 
+                    St = add_error(Line, {undefined_pseudo_variable, Atom},
                                    St0),
                     {{atom, Line, '$undefined'}, St}
-            catch 
+            catch
                 error: _ -> {{atom, Line, Atom}, St0}
             end;
         _ ->
@@ -989,7 +989,7 @@ kind_of_symbol(St, SymName) ->
                         % StateId is not unique for a state.
           rp_rhs,       % rule pointer -> the remaining rhs symbols
           rp_info,      % rule pointer -> expanding rules and lookahead
-          goto          % ETS-bag, keypos 1: first 
+          goto          % ETS-bag, keypos 1: first
                         % {{FromStateNum, Symbol, ToStateNum}}, then
                         % {{FromStateNum, Symbol}, ToStateNum}
          }).
@@ -1007,10 +1007,10 @@ compute_states(St0) ->
                      end, St0#yecc.rules_list),
     CodedNonterminals = code_symbols(St0#yecc.nonterminals, SymbolTab),
     %% Only coded in this phase; StC is thrown away.
-    StC = St0#yecc{rules_list = CodedRules, 
+    StC = St0#yecc{rules_list = CodedRules,
                    rules = list_to_tuple(CodedRules),
                    nonterminals = CodedNonterminals},
-    {RuleIndex, RulePointer2Rule} = 
+    {RuleIndex, RulePointer2Rule} =
         make_rule_index(StC, St0#yecc.rules_list),
     StateTab0 = {},
     StateIdTab = ets:new(yecc_state_id, [set]),
@@ -1018,7 +1018,7 @@ compute_states(St0) ->
     RulePointerRhs = make_rhs_index(StC#yecc.rules_list),
     RulePointerInfo = make_rule_pointer_info(StC, RulePointerRhs, RuleIndex),
 
-    Tables = #tabs{symbols = SymbolTab, 
+    Tables = #tabs{symbols = SymbolTab,
                    state_id = StateIdTab,
                    rp_rhs = RulePointerRhs,
                    rp_info = RulePointerInfo,
@@ -1031,8 +1031,8 @@ compute_states(St0) ->
     StateNum0 = first_state(),
     FirstState = {StateNum0, State0},
     StateTab1 = insert_state(Tables, StateTab0, FirstState, StateId),
-    {StateTab, N} = 
-        compute_states1([{StateNum0, get_current_symbols(State0)}], 
+    {StateTab, N} =
+        compute_states1([{StateNum0, get_current_symbols(State0)}],
                         FirstState, StateTab1, Tables),
     true = ets:delete(StateIdTab),
     St = St0#yecc{state_tab = StateTab, goto_tab = GotoTab, n_states = N,
@@ -1046,7 +1046,7 @@ first_state() ->
 decode_goto(GotoTab, InvSymTab) ->
     G = ets:tab2list(GotoTab),
     ets:delete_all_objects(GotoTab),
-    ets:insert(GotoTab, 
+    ets:insert(GotoTab,
                map(fun({{From, Sym, Next}}) ->
                            {{From, decode_symbol(Sym, InvSymTab)}, Next}
                    end, G)).
@@ -1061,12 +1061,12 @@ check_usage(St0) ->
     Terms = ordsets:from_list(St0#yecc.terminals),
     St2 = add_warnings(ordsets:to_list(ordsets:subtract(Terms, Syms)),
                        unused_terminal, St1),
-    DefinedNonTerminals = map(fun(#rule{symbols = [Name | _]}) -> 
+    DefinedNonTerminals = map(fun(#rule{symbols = [Name | _]}) ->
                                             Name
                               end, St2#yecc.rules_list),
     DefNonTerms = ordsets:from_list(DefinedNonTerminals),
     UndefNonTerms = ordsets:subtract(NonTerms, DefNonTerms),
-    add_errors(ordsets:to_list(ordsets:subtract(UndefNonTerms, 
+    add_errors(ordsets:to_list(ordsets:subtract(UndefNonTerms,
                                                 UnusedNonTerms)),
                missing_syntax_rule, St2).
 
@@ -1078,7 +1078,7 @@ lookup_state(StateTab, N) ->
 insert_state(#tabs{state_id = StateIdTab}, StateTab0, State, StateId) ->
     {N, _Items} = State,
     insert_state_id(StateIdTab, N, StateId),
-    StateTab = if 
+    StateTab = if
                    tuple_size(StateTab0) > N ->
                        StateTab0;
                    true ->
@@ -1168,7 +1168,7 @@ get_current_symbols1([#item{rhs = Rhs} | Items], Syms) ->
     end.
 
 state_seeds(Items, Symbols) ->
-    L = [{S,{LA,RP + 1}} || #item{rule_pointer = RP, look_ahead = LA, 
+    L = [{S,{LA,RP + 1}} || #item{rule_pointer = RP, look_ahead = LA,
                                   rhs = [S | _]} <- Items],
     state_seeds1(keysort(1, L), Symbols).
 
@@ -1191,7 +1191,7 @@ compute_state(Seed, Tables) ->
     Closure = keysort(1, erase()),
     state_items(Closure, [], [], Tables#tabs.rp_rhs).
 
-%% Collects a uniqe id for the state (all rule pointers). 
+%% Collects a uniqe id for the state (all rule pointers).
 state_items([{RP, LA} | L], Is, Id, RpRhs) ->
     I = #item{rule_pointer = RP, look_ahead = LA, rhs = element(RP, RpRhs)},
     state_items(L, [I | Is], [RP | Id], RpRhs);
@@ -1211,7 +1211,7 @@ compute_closure(Lookahead, RulePointer, RpInfo) ->
         ExpandingRules ->
             compute_closure1(ExpandingRules, Lookahead, RpInfo)
     end.
-    
+
 compute_closure1([RulePointer | Tail], NewLookahead, RpInfo) ->
     compute_closure1(Tail, NewLookahead, RpInfo),
     case get(RulePointer) of
@@ -1220,7 +1220,7 @@ compute_closure1([RulePointer | Tail], NewLookahead, RpInfo) ->
             compute_closure(NewLookahead, RulePointer, RpInfo);
         Lookahead2 ->
             Lookahead = set_union(Lookahead2, NewLookahead),
-            if 
+            if
                 Lookahead =:= Lookahead2 -> % Old
                     Lookahead2; % void()
                 true -> % Merge
@@ -1308,7 +1308,7 @@ suffixes([_ | T]=L) ->
     [L | suffixes(T)].
 
 %% Setup info about lookahead and expanding rules for each point
-%% ("rule pointer") in the grammar. 
+%% ("rule pointer") in the grammar.
 make_rule_pointer_info(StC, RpRhs, RuleIndex) ->
     SymbolTab = StC#yecc.symbol_tab,
     LcTab = make_left_corner_table(StC),
@@ -1362,8 +1362,8 @@ make_left_corner_table(#yecc{rules_list = RulesList} = St) ->
                         {Lhs,{Lhs, Rhs}}
                 end, RulesList),
     LeftHandTab = dict:from_list(family(Rules)),
-    X0 = [{S,H} || {H,{H,Rhs}} <- Rules, 
-                   S <- Rhs, 
+    X0 = [{S,H} || {H,{H,Rhs}} <- Rules,
+                   S <- Rhs,
                    not is_terminal(SymbolTab, S)],
     XL = family_with_domain(X0, St#yecc.nonterminals),
     X = dict:from_list(XL),
@@ -1385,14 +1385,14 @@ make_left_corner_table(#yecc{rules_list = RulesList} = St) ->
 
 left_corners(Q0, LC0, LeftHandTab, SymbolTab, Xref) ->
     case usort(append(Q0)) of
-        [] -> 
+        [] ->
             LC0;
-        Q1 -> 
+        Q1 ->
             Rs = flatmap(fun(NT) -> dict:fetch(NT, LeftHandTab) end, Q1),
             {LC, Q} = left_corners2(Rs, LC0, [], SymbolTab, Xref),
             left_corners(Q, LC, LeftHandTab, SymbolTab, Xref)
     end.
-    
+
 left_corners2([], LC, Q, _SymbolTab, _Xref) ->
     {LC, Q};
 left_corners2([{Head,Rhs} | Rs], LC, Q0, SymbolTab, Xref) ->
@@ -1429,9 +1429,9 @@ left_corner_rhs([], _Head, _LC, Ts, _SymbolTab) ->
 %% For every non-terminal return a list of "rule pointers" for rules
 %% expanding the non-terminal.
 %% Also assigns a unique number to each point in the grammar, "rule pointer".
-make_rule_index(#yecc{nonterminals = Nonterminals, 
+make_rule_index(#yecc{nonterminals = Nonterminals,
                       rules_list = RulesList}, RulesListNoCodes) ->
-    {RulesL, _N} = 
+    {RulesL, _N} =
         lists:mapfoldl(fun(#rule{symbols = [Nonterminal | Daughters]}, I) ->
                                I1 = I + length(Daughters)+1,
                                {{Nonterminal, I}, I1}
@@ -1448,7 +1448,7 @@ make_rule_index(#yecc{nonterminals = Nonterminals,
 
 compute_parse_actions(N, St, StateActions) ->
     case N < first_state() of
-        true -> 
+        true ->
             StateActions;
         false ->
             {N, StateN} = lookup_state(St#yecc.state_tab, N),
@@ -1459,8 +1459,8 @@ compute_parse_actions(N, St, StateActions) ->
 
 compute_parse_actions1([], _, _) ->
     [];
-compute_parse_actions1([#item{rule_pointer = RulePointer, 
-                              look_ahead = Lookahead0, 
+compute_parse_actions1([#item{rule_pointer = RulePointer,
+                              look_ahead = Lookahead0,
                               rhs = Rhs} | Items], N, St) ->
     case Rhs of
         [] ->
@@ -1475,8 +1475,8 @@ compute_parse_actions1([#item{rule_pointer = RulePointer,
                 {[Head | Daughters0], _RuleLine, _} ->
                     Daughters = delete('$empty', Daughters0),
                     [{Lookahead,
-                      #reduce{rule_nmbr = RulePointer, head = Head, 
-                              nmbr_of_daughters = length(Daughters), 
+                      #reduce{rule_nmbr = RulePointer, head = Head,
+                              nmbr_of_daughters = length(Daughters),
                               prec = get_prec(Daughters ++ [Head], St)}}
                      | compute_parse_actions1(Items, N, St)]
             end;
@@ -1497,7 +1497,7 @@ compute_parse_actions1([#item{rule_pointer = RulePointer,
                               _ -> a
                           end,
                     [{[DecSymbol],
-                      #shift{state = goto(N, DecSymbol, St), 
+                      #shift{state = goto(N, DecSymbol, St),
                              pos = Pos,
                              prec = Prec1,
                              rule_nmbr = RulePointer}}
@@ -1524,7 +1524,7 @@ create_precedence_table(St) ->
     PrecTab = ets:new(yecc_precedences, []),
     true = ets:insert(PrecTab, St#yecc.prec),
     St#yecc{prec_tab = PrecTab}.
-    
+
 -record(cxt, {terminal, state_n, yecc, res}).
 
 %% Detects shift-reduce and reduce-reduce conflicts.
@@ -1533,29 +1533,29 @@ create_precedence_table(St) ->
 %% Reduce/reduce conflicts are considered errors.
 find_action_conflicts(St0) ->
     Cxt0 = #cxt{yecc = St0, res = []},
-    {#cxt{yecc = St, res = Res}, NewParseActions0} = 
+    {#cxt{yecc = St, res = Res}, NewParseActions0} =
         foldl(fun({N, Actions0}, {Cxt1, StateActions}) ->
                       L = [{Terminal, Act} || {Lookahead, Act} <- Actions0,
                                               Terminal <- Lookahead],
-                      {Cxt, Actions} = 
+                      {Cxt, Actions} =
                           foldl(fun({Terminal, As}, {Cxt2,Acts0}) ->
-                                        Cxt3 = Cxt2#cxt{terminal = Terminal, 
+                                        Cxt3 = Cxt2#cxt{terminal = Terminal,
                                                         state_n = N},
-                                        {Action, Cxt} = 
+                                        {Action, Cxt} =
                                             find_action_conflicts2(As, Cxt3),
                                         {Cxt,[{Action,Terminal} | Acts0]}
                                 end, {Cxt1,[]}, family(L)),
                       {Cxt,[{N,inverse(family(Actions))} | StateActions]}
               end, {Cxt0, []}, St0#yecc.parse_actions),
-    if 
-        length(Res) > 0, St#yecc.verbose -> 
+    if
+        length(Res) > 0, St#yecc.verbose ->
             io:fwrite(<<"\n*** Conflicts resolved by operator "
                         "precedences:\n\n">>),
             foreach(fun({Confl, Name}) ->
                             report_conflict(Confl, St, Name, prec)
                     end, reverse(Res)),
             io:fwrite(<<"*** End of resolved conflicts\n\n">>);
-        true -> 
+        true ->
             ok
     end,
     NewParseActions = reverse(NewParseActions0),
@@ -1564,7 +1564,7 @@ find_action_conflicts(St0) ->
 find_action_conflicts2([Action], Cxt) ->
     {Action, Cxt};
 find_action_conflicts2([#shift{state = St, pos = Pos, prec = Prec},
-                        #shift{state = St}=S | As], 
+                        #shift{state = St}=S | As],
                        Cxt) when Pos =:= a; Prec =:= {0,none} ->
     %% This is a kludge to remove the bogus shift-shift conflict
     %% introduced in compute_parse_actions1().
@@ -1602,26 +1602,26 @@ find_action_conflicts2([#shift{prec = {P1, Ass1}}=S | Rs], Cxt0) ->
     end;
 find_action_conflicts2(Rs, Cxt0) ->
     find_reduce_reduce(Rs, Cxt0).
-         
+
 find_reduce_reduce([R], Cxt) ->
     {R, Cxt};
 find_reduce_reduce([accept=A, #reduce{}=R | Rs], Cxt0) ->
     Confl = conflict(R, A, Cxt0),
-    St = conflict_error(Confl, Cxt0#cxt.yecc), 
+    St = conflict_error(Confl, Cxt0#cxt.yecc),
     Cxt = Cxt0#cxt{yecc = St},
     find_reduce_reduce([R | Rs], Cxt);
-find_reduce_reduce([#reduce{head = Categ1, prec = {P1, _}}=R1, 
+find_reduce_reduce([#reduce{head = Categ1, prec = {P1, _}}=R1,
                     #reduce{head = Categ2, prec = {P2, _}}=R2 | Rs], Cxt0) ->
     #cxt{res = Res0, yecc = St0} = Cxt0,
     Confl = conflict(R1, R2, Cxt0),
-    {R, Res, St} = 
+    {R, Res, St} =
         if
             P1 > P2 ->
                 {R1, [{Confl, Categ1} | Res0], St0};
             P2 > P1 ->
                 {R2, [{Confl, Categ2} | Res0], St0};
             true ->
-                St1 = conflict_error(Confl, St0), 
+                St1 = conflict_error(Confl, St0),
                 {R1, Res0, St1}
         end,
     Cxt = Cxt0#cxt{res = Res, yecc = St},
@@ -1651,7 +1651,7 @@ find_identical_shift_states(StateActions) ->
                                           shift_actions_only(Actions)
                                   end, family(L1)),
     R = [{State, hd(States)} || {_Actions, States} <- SO, State <- States]
-        ++ 
+        ++
         [{State, State} || {_Actions, States} <- NotSO, State <- States],
     lists:keysort(1, R).
 
@@ -1673,7 +1673,7 @@ find_partial_shift_states(StateActionsL, StateReprs) ->
     PartsL = sofs:to_external(Parts),
     %% Assign temporary names to the parts of the partition (of actions):
     PartNameL = lists:zip(seq1(length(PartsL)), PartsL),
-    ActPartL = [{Action,PartName} || 
+    ActPartL = [{Action,PartName} ||
                    {PartName,Actions} <- PartNameL,
                    Action <- Actions],
     ActionPartName = sofs:relation(ActPartL, [{action,partname}]),
@@ -1682,26 +1682,26 @@ find_partial_shift_states(StateActionsL, StateReprs) ->
 
     %% Parts that equal all actions of a state:
     PartActions = sofs:family(PartNameL, [{partname,[action]}]),
-    PartState = 
+    PartState =
         sofs:relative_product(PartActions, sofs:converse(StateActions)),
     PartStates = sofs_family_with_domain(PartState, sofs:domain(PartActions)),
 
-    PartDataL = [#part_data{name = Nm, eq_state = EqS, actions = P, 
-                            n_actions = length(P), 
-                            states = ordsets:from_list(S)} || 
-                    {{Nm,P}, {Nm,S}, {Nm,EqS}} <- 
-                        lists:zip3(PartNameL, 
+    PartDataL = [#part_data{name = Nm, eq_state = EqS, actions = P,
+                            n_actions = length(P),
+                            states = ordsets:from_list(S)} ||
+                    {{Nm,P}, {Nm,S}, {Nm,EqS}} <-
+                        lists:zip3(PartNameL,
                                    sofs:to_external(PartInStates),
                                    sofs:to_external(PartStates))],
     true = length(PartDataL) =:= length(PartNameL),
     Ps = select_parts(PartDataL),
 
     J1 = [{State, Actions, {jump_some,hd(States)}} ||
-             {_W, #part_data{actions = Actions, eq_state = [], 
+             {_W, #part_data{actions = Actions, eq_state = [],
                              states = States}} <- Ps,
              State <- States],
     J2 = [{State, Actions, {jump_all,To}} ||
-             {_W, #part_data{actions = Actions, eq_state = EqS, 
+             {_W, #part_data{actions = Actions, eq_state = EqS,
                              states = States}} <- Ps,
              To <- EqS,
              State <- States,
@@ -1709,19 +1709,19 @@ find_partial_shift_states(StateActionsL, StateReprs) ->
     J = lists:keysort(1, J1 ++ J2),
 
     JumpStates = ordsets:from_list([S || {S,_,_} <- J]),
-    {JS, NJS} = 
+    {JS, NJS} =
         sofs:partition(1, sofs:relation(StateActionsL, [{state, actions}]),
                        sofs:set(JumpStates, [state])),
-    R = 
+    R =
         [{S, {Actions,jump_none}} || {S,Actions} <- sofs:to_external(NJS)]
         ++
-        [{S, {Actions--Part, {Tag,ToS,Part}}} || 
-            {{S,Actions}, {S,Part,{Tag,ToS}}} <- 
+        [{S, {Actions--Part, {Tag,ToS,Part}}} ||
+            {{S,Actions}, {S,Part,{Tag,ToS}}} <-
                 lists:zip(sofs:to_external(JS), J)],
     true = length(StateActionsL) =:= length(R),
     lists:keysort(1, R).
 
-%% Very greedy. By no means optimal. 
+%% Very greedy. By no means optimal.
 select_parts([]) ->
     [];
 select_parts(PartDataL) ->
@@ -1733,14 +1733,14 @@ select_parts(PartDataL) ->
             [];
         true ->
             %% Cannot extract more clauses from the chosen part's states:
-            NL = [D#part_data{states = NewS} || 
+            NL = [D#part_data{states = NewS} ||
                      {W1, #part_data{states = S0}=D} <- Ws,
                      W1 > 0,
                      (NewS = ordsets:subtract(S0, S)) =/= []],
-            if 
+            if
                 length(S) =:= 1; NActions =:= 1 ->
                     select_parts(NL);
-                true -> 
+                true ->
                     [{W,PD} | select_parts(NL)]
             end
     end.
@@ -1765,11 +1765,11 @@ shift_actions_only(Actions) ->
 
 collect_some_state_info(StateActions, StateReprs) ->
     RF = fun({_LA, A}) -> is_record(A, reduce) end,
-    L = [{State, 
+    L = [{State,
           begin
               RO = lists:all(RF, LaActions),
               %% C is currently always ""; identical states are all shift.
-              C = [io_lib:fwrite(<<" %% ~w\n">>, [State]) || 
+              C = [io_lib:fwrite(<<" %% ~w\n">>, [State]) ||
                       true <- [RO], Repr =/= State],
               #state_info{reduce_only = RO, state_repr = Repr, comment = C}
           end} ||
@@ -1786,11 +1786,11 @@ report_conflict(Conflict, St, ActionName, How) ->
         St#yecc.verbose ->
             io:fwrite(<<"~s\n">>, [format_conflict(Conflict)]),
             Formated = format_symbol(ActionName),
-            case How of 
+            case How of
                 prec ->
                     io:fwrite(<<"Resolved in favor of ~s.\n\n">>, [Formated]);
                 default ->
-                    io:fwrite(<<"Conflict resolved in favor of ~s.\n\n">>, 
+                    io:fwrite(<<"Conflict resolved in favor of ~s.\n\n">>,
                               [Formated])
             end;
         true ->
@@ -1809,10 +1809,10 @@ add_conflict(Conflict, St) ->
             St
     end.
 
-conflict(#shift{prec = Prec1, rule_nmbr = RuleNmbr1}, 
+conflict(#shift{prec = Prec1, rule_nmbr = RuleNmbr1},
          #shift{prec = Prec2, rule_nmbr = RuleNmbr2}, Cxt) ->
     %% Conflict due to precedences "one level up". Kludge.
-    #cxt{terminal = Symbol, state_n = N, yecc = St} = Cxt,    
+    #cxt{terminal = Symbol, state_n = N, yecc = St} = Cxt,
     {_, L1, RuleN1} = rule(RuleNmbr1, St),
     {_, L2, RuleN2} = rule(RuleNmbr2, St),
     Confl = {one_level_up, {L1, RuleN1, Prec1}, {L2, RuleN2, Prec2}},
@@ -1821,9 +1821,9 @@ conflict(#reduce{rule_nmbr = RuleNmbr1}, NewAction, Cxt) ->
     #cxt{terminal = Symbol, state_n = N, yecc = St} = Cxt,
     {R1, RuleLine1, RuleN1} = rule(RuleNmbr1, St),
     Confl = case NewAction of
-                accept -> 
+                accept ->
                     {accept, St#yecc.rootsymbol};
-                #reduce{rule_nmbr = RuleNmbr2} -> 
+                #reduce{rule_nmbr = RuleNmbr2} ->
                     {R2, RuleLine2, RuleN2} = rule(RuleNmbr2, St),
                     {reduce, R2, RuleN2, RuleLine2};
                 #shift{state = NewState} ->
@@ -1831,16 +1831,16 @@ conflict(#reduce{rule_nmbr = RuleNmbr1}, NewAction, Cxt) ->
             end,
     {Symbol, N, {R1, RuleN1, RuleLine1}, Confl}.
 
-format_conflict({Symbol, N, _, {one_level_up, 
-                                {L1, RuleN1, {P1, Ass1}}, 
+format_conflict({Symbol, N, _, {one_level_up,
+                                {L1, RuleN1, {P1, Ass1}},
                                 {L2, RuleN2, {P2, Ass2}}}}) ->
     S1 = io_lib:fwrite(<<"Conflicting precedences of symbols when "
-                         "scanning ~s in state ~w:\n">>, 
+                         "scanning ~s in state ~w:\n">>,
                        [format_symbol(Symbol), N]),
     S2 = io_lib:fwrite(<<"   ~s ~w (rule ~w at line ~w)\n"
                           "      vs.\n">>,
                        [format_assoc(Ass1), P1, RuleN1, L1]),
-    S3 = io_lib:fwrite(<<"   ~s ~w (rule ~w at line ~w)\n">>, 
+    S3 = io_lib:fwrite(<<"   ~s ~w (rule ~w at line ~w)\n">>,
                        [format_assoc(Ass2), P2, RuleN2, L2]),
     [S1, S2, S3];
 format_conflict({Symbol, N, Reduce, Confl}) ->
@@ -1850,14 +1850,14 @@ format_conflict({Symbol, N, Reduce, Confl}) ->
              {[HR | TR], RuleNmbr, RuleLine} ->
                  io_lib:fwrite(<<"   Reduce to ~s from ~s (rule ~w at "
                                  "line ~w)\n      vs.\n">>,
-                               [format_symbol(HR), format_symbols(TR), 
+                               [format_symbol(HR), format_symbols(TR),
                                 RuleNmbr, RuleLine])
          end,
-    S3 = case Confl of 
+    S3 = case Confl of
              {reduce, [HR2|TR2], RuleNmbr2, RuleLine2} ->
                  io_lib:fwrite(<<"   reduce to ~s from ~s "
                                  "(rule ~w at line ~w).">>,
-                               [format_symbol(HR2), format_symbols(TR2), 
+                               [format_symbol(HR2), format_symbols(TR2),
                                 RuleNmbr2, RuleLine2]);
              {shift, NewState, Sym} ->
                  io_lib:fwrite(<<"   shift to state ~w, adding right "
@@ -1904,7 +1904,7 @@ format_conflict({Symbol, N, Reduce, Confl}) ->
 %% - the include file yeccpre.hrl has been changed.
 
 -define(CODE_VERSION, "1.4").
--define(YECC_BUG(M, A), 
+-define(YECC_BUG(M, A),
         iolist_to_binary([" erlang:error({yecc_bug,\"",?CODE_VERSION,"\",",
                           io_lib:fwrite(M, A), "}).\n\n"])).
 
@@ -1913,22 +1913,22 @@ output_prelude(Outport, Inport, St0) when St0#yecc.includefile =:= [] ->
     St5 = output_header(St0),
     #yecc{infile = Infile, module = Module} = St5,
     St10 = fwrite(St5, <<"-module(~w).\n">>, [Module]),
-    St20 = 
+    St20 =
         fwrite(St10,
                <<"-export([parse/1, parse_and_scan/1, format_error/1]).\n">>,
                []),
-    {St25, N_lines_1, LastErlangCodeLine} = 
-        case St20#yecc.erlang_code of 
+    {St25, N_lines_1, LastErlangCodeLine} =
+        case St20#yecc.erlang_code of
             none ->
                 {St20, 0, no_erlang_code};
             Next_line ->
                 St_10 = output_file_directive(St20, Infile, Next_line-1),
                 Nmbr_of_lines = include1([], Inport, Outport),
-                {St_10, Nmbr_of_lines, 
+                {St_10, Nmbr_of_lines,
                  {last_erlang_code_line, Next_line+Nmbr_of_lines}}
     end,
     St30 = nl(St25),
-    IncludeFile = 
+    IncludeFile =
         filename:join([code:lib_dir(parsetools), "include","yeccpre.hrl"]),
     %% Maybe one could assume there are no warnings in this file.
     St = output_file_directive(St30, IncludeFile, 0),
@@ -1941,18 +1941,18 @@ output_prelude(Outport, Inport, St0) ->
     St20 = output_file_directive(St10, Includefile, 0),
     N_lines_1 = include(St20, Includefile, Outport),
     St30 = nl(St20),
-    case St30#yecc.erlang_code of 
+    case St30#yecc.erlang_code of
         none ->
             {St30, N_lines_1, no_erlang_code};
         Next_line ->
             St = output_file_directive(St30, Infile, Next_line-1),
             Nmbr_of_lines = include1([], Inport, Outport),
-            {St, Nmbr_of_lines + N_lines_1, 
+            {St, Nmbr_of_lines + N_lines_1,
              {last_erlang_code_line, Next_line+Nmbr_of_lines}}
     end.
 
 output_header(St0) ->
-    lists:foldl(fun(Str, St) -> fwrite(St, <<"~s\n">>, [Str]) 
+    lists:foldl(fun(Str, St) -> fwrite(St, <<"~s\n">>, [Str])
                 end, St0, St0#yecc.header).
 
 output_goto(St, [{_Nonterminal, []} | Go], StateInfo) ->
@@ -1970,7 +1970,7 @@ output_goto1(St0, [{From, To} | Tail], F, StateInfo, IsFirst) ->
     {To, ToInfo} = lookup_state(StateInfo, To),
     #state_info{reduce_only = RO, state_repr = Repr, comment = C} = ToInfo,
     if
-        RO -> 
+        RO ->
             %% Reduce actions do not use the state, so we just pass
             %% the old (now bogus) on:
             FromS = io_lib:fwrite("~w=_S", [From]),
@@ -1979,11 +1979,11 @@ output_goto1(St0, [{From, To} | Tail], F, StateInfo, IsFirst) ->
             FromS = io_lib:fwrite("~w", [From]),
             ToS = io_lib:fwrite("~w", [To])
     end,
-    St20 = fwrite(St10, <<"~w(~s, Cat, Ss, Stack, T, Ts, Tzr) ->\n">>, 
+    St20 = fwrite(St10, <<"~w(~s, Cat, Ss, Stack, T, Ts, Tzr) ->\n">>,
                   [F,FromS]),
     St30 = fwrite(St20, <<"~s">>, [C]),
     %% Short-circuit call to yeccpars2:
-    St = fwrite(St30, <<" yeccpars2_~w(~s, Cat, Ss, Stack, T, Ts, Tzr)">>, 
+    St = fwrite(St30, <<" yeccpars2_~w(~s, Cat, Ss, Stack, T, Ts, Tzr)">>,
                 [Repr, ToS]),
     output_goto1(St, Tail, F, StateInfo, false);
 output_goto1(St, [], _F, _StateInfo, _IsFirst) ->
@@ -1994,7 +1994,7 @@ output_goto_fini(F, NT, #yecc{includefile_version = {1,1}}=St0) ->
     St10 = delim(St0, false),
     St = fwrite(St10, <<"~w(State, _Cat, _Ss, _Stack, _T, _Ts, _Tzr) ->\n">>,
                 [F]),
-    fwrite(St, 
+    fwrite(St,
            ?YECC_BUG(<<"{~w, State, missing_in_goto_table}">>, [NT]),
            []);
 output_goto_fini(_F, _NT, St) ->
@@ -2002,12 +2002,12 @@ output_goto_fini(_F, _NT, St) ->
 
 %% Find actions having user code.
 find_user_code(ParseActions, St) ->
-    [#user_code{state = State, 
-                terminal = Terminal, 
-                funname = inlined_function_name(State, Terminal), 
-                action = Action} || 
+    [#user_code{state = State,
+                terminal = Terminal,
+                funname = inlined_function_name(State, Terminal),
+                action = Action} ||
         {State, La_actions} <- ParseActions,
-        {Action, Terminals, RuleNmbr, NmbrOfDaughters} 
+        {Action, Terminals, RuleNmbr, NmbrOfDaughters}
             <- find_user_code2(La_actions),
         case tokens(RuleNmbr, St) of
             [{var, _, '__1'}] -> NmbrOfDaughters =/= 1;
@@ -2034,7 +2034,7 @@ output_actions(St0, StateJumps, StateInfo) ->
     %% be reached. Only when shifting, that is, calling yeccpars1(),
     %% will yeccpars2() be called.
     Y2CL = [NewState || {_State,{Actions,J}} <- StateJumps,
-                        {_LA, #shift{state = NewState}} <- 
+                        {_LA, #shift{state = NewState}} <-
                             (Actions
                              ++ [A || {_Tag,_To,Part} <- [J], A <- Part])],
     Y2CS = ordsets:from_list([0 | Y2CL]),
@@ -2043,11 +2043,11 @@ output_actions(St0, StateJumps, StateInfo) ->
     Sel = [{S,true} || S <- ordsets:to_list(Y2CS)] ++
           [{S,false} || S <- ordsets:to_list(NY2CS)],
 
-    SelS = [{State,Called} || 
-               {{State,_JActions}, {State,Called}} <- 
+    SelS = [{State,Called} ||
+               {{State,_JActions}, {State,Called}} <-
                    lists:zip(StateJumps, lists:keysort(1, Sel))],
     St10 = foldl(fun({State, Called}, St_0) ->
-                         {State, #state_info{state_repr = IState}} = 
+                         {State, #state_info{state_repr = IState}} =
                              lookup_state(StateInfo, State),
                          output_state_selection(St_0, State, IState, Called)
             end, St0, SelS),
@@ -2056,9 +2056,9 @@ output_actions(St0, StateJumps, StateInfo) ->
                 ?YECC_BUG(<<"{missing_state_in_action_table, Other}">>, []),
                 []),
     foldl(fun({State, JActions}, St_0) ->
-                  {State, #state_info{state_repr = IState}} = 
+                  {State, #state_info{state_repr = IState}} =
                       lookup_state(StateInfo, State),
-                  output_state_actions(St_0, State, IState, 
+                  output_state_actions(St_0, State, IState,
                                        JActions, StateInfo)
           end, St, StateJumps).
 
@@ -2066,8 +2066,8 @@ output_state_selection(St0, State, IState, Called) ->
     Comment = [<<"%% ">> || false <- [Called]],
     St = fwrite(St0, <<"~syeccpars2(~w=S, Cat, Ss, Stack, T, Ts, Tzr) ->\n">>,
                 [Comment, State]),
-    fwrite(St, 
-           <<"~s yeccpars2_~w(S, Cat, Ss, Stack, T, Ts, Tzr);\n">>, 
+    fwrite(St,
+           <<"~s yeccpars2_~w(S, Cat, Ss, Stack, T, Ts, Tzr);\n">>,
            [Comment, IState]).
 
 output_state_actions(St, State, State, {Actions,jump_none}, SI) ->
@@ -2079,7 +2079,7 @@ output_state_actions(St0, State, State, {Actions, Jump}, SI) ->
              jump_all -> To
          end,
     St = output_state_actions1(St0, State, Actions, true, {to, CS}, SI),
-    if 
+    if
         To =:= State ->
             output_state_actions1(St, CS, Common, true, normal, SI);
         true ->
@@ -2092,17 +2092,17 @@ output_state_actions1(St, State, [], _IsFirst, normal, _SI) ->
     output_state_actions_fini(State, St);
 output_state_actions1(St0, State, [], IsFirst, {to, ToS}, _SI) ->
     St = delim(St0, IsFirst),
-    fwrite(St, 
+    fwrite(St,
            <<"yeccpars2_~w(S, Cat, Ss, Stack, T, Ts, Tzr) ->\n"
             " yeccpars2_~w(S, Cat, Ss, Stack, T, Ts, Tzr).\n\n">>,
            [State, ToS]);
-output_state_actions1(St0, State, [{_, #reduce{}=Action}], 
+output_state_actions1(St0, State, [{_, #reduce{}=Action}],
                       IsFirst, _End, SI) ->
     St = output_reduce(St0, State, "Cat", Action, IsFirst, SI),
     fwrite(St, <<".\n\n">>, []);
 output_state_actions1(St0, State, [{Lookahead,Action} | Tail],
                       IsFirst, End, SI) ->
-    {_, St} = 
+    {_, St} =
         foldl(fun(Terminal, {IsFst,St_0}) ->
                       {false,
                        output_action(St_0, State, Terminal, Action, IsFst,SI)}
@@ -2118,7 +2118,7 @@ output_action(St0, State, Terminal, #shift{state = NewState}, IsFirst, _SI) ->
     output_call_to_includefile(NewState, St);
 output_action(St0, State, Terminal, accept, IsFirst, _SI) ->
     St10 = delim(St0, IsFirst),
-    St = fwrite(St10, 
+    St = fwrite(St10,
                 <<"yeccpars2_~w(_S, ~s, _Ss, Stack, _T, _Ts, _Tzr) ->\n">>,
                 [State, quoted_atom(Terminal)]),
     fwrite(St, <<" {ok, hd(Stack)}">>, []);
@@ -2127,10 +2127,10 @@ output_action(St, _State, _Terminal, nonassoc, _IsFirst, _SI) ->
 
 output_call_to_includefile(NewState, #yecc{includefile_version = {1,1}}=St) ->
     %% Backward compatibility.
-    fwrite(St, <<" yeccpars1(Ts, Tzr, ~w, [S | Ss], [T | Stack])">>, 
+    fwrite(St, <<" yeccpars1(Ts, Tzr, ~w, [S | Ss], [T | Stack])">>,
            [NewState]);
 output_call_to_includefile(NewState, St) ->
-    fwrite(St, <<" yeccpars1(S, ~w, Ss, Stack, T, Ts, Tzr)">>, 
+    fwrite(St, <<" yeccpars1(S, ~w, Ss, Stack, T, Ts, Tzr)">>,
            [NewState]).
 
 output_state_actions_fini(State, St0) ->
@@ -2139,20 +2139,20 @@ output_state_actions_fini(State, St0) ->
     St = fwrite(St10, <<"yeccpars2_~w(_, _, _, _, T, _, _) ->\n">>, [State]),
     fwrite(St, <<" yeccerror(T).\n\n">>, []).
 
-output_reduce(St0, State, Terminal0, 
-              #reduce{rule_nmbr = RuleNmbr, 
-                      head = Head, 
+output_reduce(St0, State, Terminal0,
+              #reduce{rule_nmbr = RuleNmbr,
+                      head = Head,
                       nmbr_of_daughters = NmbrOfDaughters},
               IsFirst, StateInfo) ->
     St10 = delim(St0, IsFirst),
-    Terminal = if 
+    Terminal = if
                    is_atom(Terminal0) -> quoted_atom(Terminal0);
                    true -> Terminal0
                end,
     St20 = fwrite(St10,
                   <<"yeccpars2_~w(_S, ~s, Ss, Stack, T, Ts, Tzr) ->\n">>,
                   [State, Terminal]),
-    St30 = 
+    St30 =
         if
             NmbrOfDaughters < 2 ->
                 Ns = "Ss",
@@ -2169,10 +2169,10 @@ output_reduce(St0, State, Terminal0,
                    St30;
                _ ->
                    NewStack = "NewStack",
-                   fwrite(St30, <<" NewStack = ~w(Stack),\n">>, 
+                   fwrite(St30, <<" NewStack = ~w(Stack),\n">>,
                           [inlined_function_name(State, Terminal0)])
                end,
-    if 
+    if
         NmbrOfDaughters =:= 0 ->
             NextState = goto(State, Head, St40),
             {NextState, I} = lookup_state(StateInfo, NextState),
@@ -2189,7 +2189,7 @@ output_reduce(St0, State, Terminal0,
                    <<" yeccpars2_~w(~s, ~s, [~w | Ss], ~s, T, Ts, Tzr)">>,
                    [Repr, NextS, Terminal, State, NewStack]);
         true ->
-            fwrite(St40, 
+            fwrite(St40,
                    <<" ~w(hd(~s), ~s, ~s, ~s, T, Ts, Tzr)">>,
                    [function_name(yeccgoto, Head), Ns,
                     Terminal, Ns, NewStack])
@@ -2202,11 +2202,11 @@ delim(St, false) ->
 
 quoted_atom(Atom) ->
     io_lib:fwrite(<<"~w">>, [Atom]).
-    
+
 output_inlined(St, UserCodeActions, Infile) ->
-    foldl(fun(#user_code{funname = InlinedFunctionName, 
+    foldl(fun(#user_code{funname = InlinedFunctionName,
                          action = Action}, St_0) ->
-                  output_inlined(St_0, InlinedFunctionName, 
+                  output_inlined(St_0, InlinedFunctionName,
                                  Action, Infile)
           end, St, UserCodeActions).
 
@@ -2218,10 +2218,10 @@ output_inlined(St0, FunctionName, Reduce, Infile) ->
     Line0 = first_line(Tokens),
     NLines = last_line(Tokens) - Line0,
 
-    St5 = if 
+    St5 = if
               WF ->
                   St0;
-              not WF -> 
+              not WF ->
                   %% The compiler will generate an error message for
                   %% the inlined function (unless the reason that yecc
                   %% failed to parse the action was some macro). The
@@ -2239,18 +2239,18 @@ output_inlined(St0, FunctionName, Reduce, Infile) ->
     %% Currently the (old) inliner emits less code if matching the
     %% stack inside the body rather than in the head...
     St40 = case N_daughters of
-               0 -> 
+               0 ->
                    Stack = "__Stack0",
                    St30;
-               _ -> 
+               _ ->
                    Stack = "__Stack",
-                   A = concat(flatmap(fun(I) -> [",__",I] end, 
+                   A = concat(flatmap(fun(I) -> [",__",I] end,
                                       lists:seq(N_daughters, 1, -1))),
-                   fwrite(St30, <<" ~s = __Stack0,\n">>, 
+                   fwrite(St30, <<" ~s = __Stack0,\n">>,
                           [append(["[", tl(A), " | __Stack]"])])
            end,
     St = St40#yecc{line = St40#yecc.line + NLines},
-    fwrite(St, <<" [begin\n  ~s\n  end | ~s].\n\n">>, 
+    fwrite(St, <<" [begin\n  ~s\n  end | ~s].\n\n">>,
            [pp_tokens(Tokens, Line0), Stack]).
 
 inlined_function_name(State, "Cat") ->
@@ -2263,7 +2263,7 @@ function_name(Name, Suf) ->
     list_to_atom(concat([Name, '_' | quoted_atom(Suf)])).
 
 rule(RulePointer, St) ->
-    #rule{n = N, line = Line, symbols = Symbols} = 
+    #rule{n = N, line = Line, symbols = Symbols} =
         dict:fetch(RulePointer, St#yecc.rule_pointer2rule),
     {Symbols, Line, N}.
 
@@ -2330,11 +2330,11 @@ code_terminal(T, SymbolTab) ->
 
 decode_terminals(BM, InvSymbolTab) ->
     case get(BM) of
-        undefined -> 
+        undefined ->
             Symbols = decode_terminals(BM, 0, InvSymbolTab),
             put(BM, Symbols),
             Symbols;
-        Symbols -> 
+        Symbols ->
             Symbols
     end.
 
@@ -2467,7 +2467,7 @@ parse_file(Epp) ->
 %% Keeps the line breaks of the original code.
 pp_tokens(Tokens, Line0) ->
     concat(pp_tokens1(Tokens, Line0, [])).
-    
+
 pp_tokens1([], _Line0, _T0) ->
     [];
 pp_tokens1([T | Ts], Line0, T0) ->
@@ -2478,15 +2478,15 @@ pp_symbol({var,_,Var}) -> Var;
 pp_symbol({_,_,Symbol}) -> io_lib:fwrite(<<"~p">>, [Symbol]);
 pp_symbol({Symbol, _}) -> Symbol.
 
-pp_sep(Line, Line0, T0) when Line > Line0 -> 
+pp_sep(Line, Line0, T0) when Line > Line0 ->
     ["\n   " | pp_sep(Line - 1, Line0, T0)];
-pp_sep(_Line, _Line0, {'.',_}) -> 
+pp_sep(_Line, _Line0, {'.',_}) ->
     "";
-pp_sep(_Line, _Line0, _T0) -> 
+pp_sep(_Line, _Line0, _T0) ->
     " ".
 
 output_file_directive(St, Filename, Line) when St#yecc.file_attrs ->
-    fwrite(St, <<"-file(~s, ~w).\n">>, 
+    fwrite(St, <<"-file(~s, ~w).\n">>,
            [format_filename(Filename), Line]);
 output_file_directive(St, _Filename, _Line) ->
     St.
@@ -2541,7 +2541,7 @@ format_symbol(Symbol) ->
             end;
         {ok, [{var, _, _}], _} ->
             String;
-        _ -> 
+        _ ->
             io_lib:fwrite(<<"~w">>, [Symbol])
     end.
 
