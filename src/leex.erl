@@ -59,6 +59,7 @@
                module,          % Module name
                opts=[],         % Options
                % posix=false,   % POSIX regular expressions
+               used_macros=[],
                errors=[],
                warnings=[]
               }).
@@ -146,7 +147,9 @@ format_error({regexp,E})->
          end,
     ["bad regexp `",Es,"'"];
 format_error(ignored_characters) ->
-    "ignored characters".
+    "ignored characters";
+format_error({unused_macros,Ms}) ->
+    "unused macro(s) " ++ string:join([io_lib:write_string(M) || M <- Ms], " ").
 
 %%%
 %%% Local functions
@@ -421,25 +424,70 @@ parse_head(Ifile, St) -> {ok,nextline(Ifile, 0),St}.
 %%  Parse the macro definition section of a file. This must exist.
 %%  The section is ended by a non-blank line which is not a macro def.
 
-parse_defs(Ifile, {ok,?DEFS_HEAD ++ Rest,L}, St) ->
+parse_defs(Ifile, Line, St) ->
+    {ok,Line1,Ms1,St1} = match_defs(Ifile, Line, St),
+    {ok,Ms2,St2} = substitute_defs(Ms1, St1),
+    {ok,Line1,Ms2,St2}.
+
+match_defs(Ifile, {ok,?DEFS_HEAD ++ Rest,L}, St) ->
     St1 = warn_ignored_chars(L, Rest, St),
-    parse_defs(Ifile, nextline(Ifile, L), [], St1);
-parse_defs(_, {ok,_,L}, St) ->
+    match_defs(Ifile, nextline(Ifile, L), [], St1);
+match_defs(_, {ok,_,L}, St) ->
     add_error({L,leex,missing_defs}, St);
-parse_defs(_, {eof,L}, St) ->
+match_defs(_, {eof,L}, St) ->
     add_error({L,leex,missing_defs}, St).
 
-parse_defs(Ifile, {ok,Chars,L}=Line, Ms, St) ->
+match_defs(Ifile, {ok,Chars,L}=Line, Ms, St) ->
     %% This little beauty matches out a macro definition, RE's are so clear.
-    MS = "^[ \t]*([A-Z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t\r\n]*)[ \t\r\n]*\$",
+    MS = "^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t\r\n]*)[ \t\r\n]*\$",
     case re:run(Chars, MS, [{capture,all_but_first,list}]) of
         {match,[Name,Def]} ->
             %%io:fwrite("~p = ~p\n", [Name,Def]),
-            parse_defs(Ifile, nextline(Ifile, L), [{Name,Def}|Ms], St);
+            match_defs(Ifile, nextline(Ifile, L), [{Name,Def}|Ms], St);
         _ -> {ok,Line,Ms,St}                    % Anything else
     end;
-parse_defs(_, Line, Ms, St) ->
+match_defs(_, Line, Ms, St) ->
     {ok,Line,Ms,St}.
+
+substitute_defs(Macros, St) ->
+    %% Extract subset of macros that possibly need substitution
+    Fun = fun({Name, Exp}, Acc) ->
+                  MS = "\\{[A-Za-z_][A-Za-z0-9_]*\\}",
+                  case re:run(Exp, MS) of
+                      {match,_} ->
+                          [Name|Acc];
+                      _ ->
+                          Acc
+                  end
+          end,
+    Names = lists:reverse(lists:foldl(Fun, [], Macros)),
+    substitute_defs(Names, Macros, St).
+
+substitute_defs([], Macros, St) ->
+    {ok, Macros, St};
+substitute_defs([H|T]=L, Macros, St) ->
+    Exp = proplists:get_value(H, Macros),
+    case substitute_defs(H, Exp, Macros, St) of
+        {Exp, St1} ->
+            substitute_defs(T, Macros, St1);
+        {Exp1, St1} ->
+            Macros1 = [{H, Exp1} | proplists:delete(H, Macros)],
+            substitute_defs(L, Macros1, St1)
+    end.
+
+substitute_defs(_Name, Exp, [], St) ->
+    {Exp, St};
+substitute_defs(Name, Exp, [{Name, _HExp}|T], St) ->
+    substitute_defs(Name, Exp, T, St);
+substitute_defs(Name, Exp, [{H, HExp}|T], St) ->
+    Split = re:split(Exp, "\\{" ++ H ++ "\\}", [{return,list}]),
+    case string:join(Split, HExp) of
+        Exp ->
+            substitute_defs(Name, Exp, T, St);
+        Exp1 ->
+            St1 = St#leex{used_macros=[H | lists:delete(H, St#leex.used_macros)]},
+            substitute_defs(Name, Exp1, T, St1)
+    end.
 
 %% parse_rules(File, Line, Macros, State) -> {ok,NextLine,REAs,Actions,State}.
 %%  Parse the RE rules section of the file. This must exist.
@@ -458,7 +506,7 @@ parse_rules(_, {eof,L}, _, St) ->
 parse_rules(Ifile, NextLine, Ms, REAs, As, N, St) ->
     case NextLine of
         {ok,?CODE_HEAD ++ _Rest,_} ->
-            parse_rules_end(Ifile, NextLine, REAs, As, St);
+            parse_rules_end(Ifile, NextLine, Ms, REAs, As, St);
         {ok,Chars,L0} ->
             %%io:fwrite("~w: ~p~n", [L0,Chars]),
             case collect_rule(Ifile, Chars, L0) of
@@ -469,16 +517,28 @@ parse_rules(Ifile, NextLine, Ms, REAs, As, N, St) ->
                 {error,E} -> add_error(E, St)
             end;
         {eof,_} ->
-            parse_rules_end(Ifile, NextLine, REAs, As, St)
+            parse_rules_end(Ifile, NextLine, Ms, REAs, As, St)
     end.
 
-parse_rules_end(_, {ok,_,L}, [], [], St) ->
+parse_rules_end(_, {ok,_,L}, _, [], [], St) ->
     add_error({L,leex,empty_rules}, St);
-parse_rules_end(_, {eof,L}, [], [], St) ->
+parse_rules_end(_, {eof,L}, _, [], [], St) ->
     add_error({L,leex,empty_rules}, St);
-parse_rules_end(_, NextLine, REAs, As, St) ->
+parse_rules_end(_, NextLine, Ms, REAs, As, St) ->
+    Names = [Name || {Name, _Exp} <- Ms],
+    St1 = case Names -- St#leex.used_macros of
+              [] ->
+                  St;
+              Unused ->
+                  case NextLine of
+                      {ok,_,L} ->
+                          add_warning(L, {unused_macros,lists:reverse(Unused)}, St);
+                      {eof,L} ->
+                          add_warning(L, {unused_macros,lists:reverse(Unused)}, St)
+                  end
+          end,
     %% Must be *VERY* careful to put rules in correct order!
-    {ok,NextLine,reverse(REAs),reverse(As),St}.
+    {ok,NextLine,reverse(REAs),reverse(As),St1}.
 
 %% collect_rule(File, Line, Lineno) ->
 %%      {ok,RegExp,ActionTokens,NewLineno} | {error,E}.
@@ -512,22 +572,22 @@ collect_action(Ifile, Chars, L0, Cont0) ->
 
 parse_rule(S, Line, [{dot,_}], Ms, N, St) ->
     case parse_rule_regexp(S, Ms, St) of
-        {ok,R} ->
-            {ok,{R,N},{N,empty_action},St};
-        {error,E} ->
-            add_error({Line,leex,E}, St)
+        {ok,R,St1} ->
+            {ok,{R,N},{N,empty_action},St1};
+        {error,E,St1} ->
+            add_error({Line,leex,E}, St1)
     end;
 parse_rule(S, Line, Atoks, Ms, N, St) ->
     case parse_rule_regexp(S, Ms, St) of
-        {ok,R} ->
+        {ok,R,St1} ->
             %%io:fwrite("RE = ~p~n", [R]),
             %% Check for token variables.
             TokenChars = var_used('TokenChars', Atoks),
             TokenLen = var_used('TokenLen', Atoks),
             TokenLine = var_used('TokenLine', Atoks),
-            {ok,{R,N},{N,Atoks,TokenChars,TokenLen,TokenLine},St};
-        {error,E} ->
-            add_error({Line,leex,E}, St)
+            {ok,{R,N},{N,Atoks,TokenChars,TokenLen,TokenLine},St1};
+        {error,E,St1} ->
+            add_error({Line,leex,E}, St1)
     end.
 
 var_used(Name, Toks) ->
@@ -537,19 +597,24 @@ var_used(Name, Toks) ->
     end.
 
 %% parse_rule_regexp(RegExpString, Macros, State) ->
-%%     {ok,RegExp} | {error,Error}.
+%%     {ok,RegExp,State} | {error,Error,State}.
 %% Substitute in macros and parse RegExpString. Cannot use re:replace
 %% here as it uses info in replace string (&).
 
 parse_rule_regexp(RE0, [{M,Exp}|Ms], St) ->
     Split= re:split(RE0, "\\{" ++ M ++ "\\}", [{return,list}]),
-    RE1 = string:join(Split, Exp),
-    parse_rule_regexp(RE1, Ms, St);
+    case string:join(Split, Exp) of
+        RE0 ->
+            parse_rule_regexp(RE0, Ms, St);
+        RE1 ->
+            St1 = St#leex{used_macros=[M | lists:delete(M, St#leex.used_macros)]},
+            parse_rule_regexp(RE1, Ms, St1)
+    end;
 parse_rule_regexp(RE, [], St) ->
     %%io:fwrite("RE = ~p~n", [RE]),
     case re_parse(RE, St) of
-        {ok,R} -> {ok,R};
-        {error,E} -> {error,{regexp,E}}
+        {ok,R} -> {ok,R,St};
+        {error,E} -> {error,{regexp,E},St}
     end.
 
 %% parse_code(File, Line, State) -> {ok,Code,NewState}.
