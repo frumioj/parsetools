@@ -60,6 +60,7 @@
                opts=[],         % Options
                encoding=none,   % Encoding of Xrl file
                % posix=false,   % POSIX regular expressions
+               used_macros=[],
                errors=[],
                warnings=[]
               }).
@@ -124,7 +125,7 @@ file(File, Opts0) ->
          catch #leex{}=St4 ->
              St4
          end,
-    leex_ret(St).             
+    leex_ret(St).
 
 format_error({file_error, Reason}) ->
     io_lib:fwrite("~ts",[file:format_error(Reason)]);
@@ -149,7 +150,9 @@ format_error({regexp,E})->
 format_error(ignored_characters) ->
     "ignored characters";
 format_error(cannot_parse) ->
-    io_lib:fwrite("cannot parse; probably encoding mismatch", []).
+    io_lib:fwrite("cannot parse; probably encoding mismatch", []);
+format_error({unused_macros,Ms}) ->
+    "unused macro(s) " ++ string:join([io_lib:write_string(M) || M <- Ms], " ").
 
 %%%
 %%% Local functions
@@ -166,7 +169,7 @@ strip_extension(File, Ext) ->
     end.
 
 options(Options0) when is_list(Options0) ->
-    try 
+    try
         Options = flatmap(fun(return) -> short_option(return, true);
                              (report) -> short_option(report, true);
                              ({return,T}) -> short_option(return, T);
@@ -189,7 +192,7 @@ short_option(report, T) ->
 
 options(Options0, [Key|Keys], L) when is_list(Options0) ->
     Options = case member(Key, Options0) of
-                  true -> 
+                  true ->
                       [atom_option(Key)|delete(Key, Options0)];
                   false ->
                       Options0
@@ -198,9 +201,9 @@ options(Options0, [Key|Keys], L) when is_list(Options0) ->
             {Key, Filename0} when Key =:= includefile;
 				  Key =:= scannerfile ->
                 case is_filename(Filename0) of
-                    no -> 
+                    no ->
                         badarg;
-                    Filename -> 
+                    Filename ->
                         {ok,[{Key,Filename}]}
                 end;
             {Key, Bool} = KB when is_boolean(Bool) ->
@@ -247,7 +250,7 @@ atom_option(Key) -> Key.
 is_filename(T) ->
     try filename:flatten(T)
     catch error: _ -> no
-    end.    
+    end.
 
 shorten_filename(Name0) ->
     {ok,Cwd} = file:get_cwd(),
@@ -266,10 +269,10 @@ leex_ret(St) ->
     Es = pack_errors(St#leex.errors),
     Ws = pack_warnings(St#leex.warnings),
     Werror = werror(St),
-    if 
+    if
         Werror ->
             do_error_return(St, Es, Ws);
-        Es =:= [] -> 
+        Es =:= [] ->
             case member(return_warnings, St#leex.opts) of
                 true -> {ok, St#leex.efile, Ws};
                 false -> {ok, St#leex.efile}
@@ -292,18 +295,18 @@ pack_errors([{File,_} | _] = Es) ->
     [{File, flatmap(fun({_,E}) -> [E] end, sort(Es))}];
 pack_errors([]) ->
     [].
-    
+
 pack_warnings([{File,_} | _] = Ws) ->
     [{File, flatmap(fun({_,W}) -> [W] end, sort(Ws))}];
 pack_warnings([]) ->
     [].
 
 report_errors(St) ->
-    when_opt(fun () -> 
-                     foreach(fun({File,{none,Mod,E}}) -> 
+    when_opt(fun () ->
+                     foreach(fun({File,{none,Mod,E}}) ->
                                      io:fwrite("~ts: ~ts\n",
                                                [File,Mod:format_error(E)]);
-                                ({File,{Line,Mod,E}}) -> 
+                                ({File,{Line,Mod,E}}) ->
                                      io:fwrite("~ts:~w: ~ts\n",
                                                [File,Line,Mod:format_error(E)])
                              end, sort(St#leex.errors))
@@ -425,25 +428,70 @@ parse_head(Ifile, St) -> {ok,nextline(Ifile, 0, St),St}.
 %%  Parse the macro definition section of a file. This must exist.
 %%  The section is ended by a non-blank line which is not a macro def.
 
-parse_defs(Ifile, {ok,?DEFS_HEAD ++ Rest,L}, St) ->
+parse_defs(Ifile, Line, St) ->
+    {ok,Line1,Ms1,St1} = match_defs(Ifile, Line, St),
+    {ok,Ms2,St2} = substitute_defs(Ms1, St1),
+    {ok,Line1,Ms2,St2}.
+
+match_defs(Ifile, {ok,?DEFS_HEAD ++ Rest,L}, St) ->
     St1 = warn_ignored_chars(L, Rest, St),
-    parse_defs(Ifile, nextline(Ifile, L, St), [], St1);
-parse_defs(_, {ok,_,L}, St) ->
+    match_defs(Ifile, nextline(Ifile, L, St1), [], St1);
+match_defs(_, {ok,_,L}, St) ->
     add_error({L,leex,missing_defs}, St);
-parse_defs(_, {eof,L}, St) ->
+match_defs(_, {eof,L}, St) ->
     add_error({L,leex,missing_defs}, St).
 
-parse_defs(Ifile, {ok,Chars,L}=Line, Ms, St) ->
+match_defs(Ifile, {ok,Chars,L}=Line, Ms, St) ->
     %% This little beauty matches out a macro definition, RE's are so clear.
-    MS = "^[ \t]*([A-Z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t\r\n]*)[ \t\r\n]*\$",
+    MS = "^[ \t]*([A-Za-z_][A-Za-z0-9_]*)[ \t]*=[ \t]*([^ \t\r\n]*)[ \t\r\n]*\$",
     case re:run(Chars, MS, [{capture,all_but_first,list},unicode]) of
         {match,[Name,Def]} ->
             %%io:fwrite("~p = ~p\n", [Name,Def]),
-            parse_defs(Ifile, nextline(Ifile, L, St), [{Name,Def}|Ms], St);
+            match_defs(Ifile, nextline(Ifile, L, St), [{Name,Def}|Ms], St);
         _ -> {ok,Line,Ms,St}                    % Anything else
     end;
-parse_defs(_, Line, Ms, St) ->
+match_defs(_, Line, Ms, St) ->
     {ok,Line,Ms,St}.
+
+substitute_defs(Macros, St) ->
+    %% Extract subset of macros that possibly need substitution
+    Fun = fun({Name, Exp}, Acc) ->
+                  MS = "\\{[A-Za-z_][A-Za-z0-9_]*\\}",
+                  case re:run(Exp, MS) of
+                      {match,_} ->
+                          [Name|Acc];
+                      _ ->
+                          Acc
+                  end
+          end,
+    Names = lists:reverse(lists:foldl(Fun, [], Macros)),
+    substitute_defs(Names, Macros, St).
+
+substitute_defs([], Macros, St) ->
+    {ok, Macros, St};
+substitute_defs([H|T]=L, Macros, St) ->
+    Exp = proplists:get_value(H, Macros),
+    case substitute_defs(H, Exp, Macros, St) of
+        {Exp, St1} ->
+            substitute_defs(T, Macros, St1);
+        {Exp1, St1} ->
+            Macros1 = [{H, Exp1} | proplists:delete(H, Macros)],
+            substitute_defs(L, Macros1, St1)
+    end.
+
+substitute_defs(_Name, Exp, [], St) ->
+    {Exp, St};
+substitute_defs(Name, Exp, [{Name, _HExp}|T], St) ->
+    substitute_defs(Name, Exp, T, St);
+substitute_defs(Name, Exp, [{H, HExp}|T], St) ->
+    Split = re:split(Exp, "\\{" ++ H ++ "\\}", [{return,list}]),
+    case string:join(Split, HExp) of
+        Exp ->
+            substitute_defs(Name, Exp, T, St);
+        Exp1 ->
+            St1 = St#leex{used_macros=[H | lists:delete(H, St#leex.used_macros)]},
+            substitute_defs(Name, Exp1, T, St1)
+    end.
 
 %% parse_rules(File, Line, Macros, State) -> {ok,NextLine,REAs,Actions,State}.
 %%  Parse the RE rules section of the file. This must exist.
@@ -462,7 +510,7 @@ parse_rules(_, {eof,L}, _, St) ->
 parse_rules(Ifile, NextLine, Ms, REAs, As, N, St) ->
     case NextLine of
         {ok,?CODE_HEAD ++ _Rest,_} ->
-            parse_rules_end(Ifile, NextLine, REAs, As, St);
+            parse_rules_end(Ifile, NextLine, Ms, REAs, As, St);
         {ok,Chars,L0} ->
             %%io:fwrite("~w: ~p~n", [L0,Chars]),
             case collect_rule(Ifile, Chars, L0) of
@@ -473,16 +521,28 @@ parse_rules(Ifile, NextLine, Ms, REAs, As, N, St) ->
                 {error,E} -> add_error(E, St)
             end;
         {eof,_} ->
-            parse_rules_end(Ifile, NextLine, REAs, As, St)
+            parse_rules_end(Ifile, NextLine, Ms, REAs, As, St)
     end.
 
-parse_rules_end(_, {ok,_,L}, [], [], St) ->
+parse_rules_end(_, {ok,_,L}, _, [], [], St) ->
     add_error({L,leex,empty_rules}, St);
-parse_rules_end(_, {eof,L}, [], [], St) ->
+parse_rules_end(_, {eof,L}, _, [], [], St) ->
     add_error({L,leex,empty_rules}, St);
-parse_rules_end(_, NextLine, REAs, As, St) ->
+parse_rules_end(_, NextLine, Ms, REAs, As, St) ->
+    Names = [Name || {Name, _Exp} <- Ms],
+    St1 = case Names -- St#leex.used_macros of
+              [] ->
+                  St;
+              Unused ->
+                  case NextLine of
+                      {ok,_,L} ->
+                          add_warning(L, {unused_macros,lists:reverse(Unused)}, St);
+                      {eof,L} ->
+                          add_warning(L, {unused_macros,lists:reverse(Unused)}, St)
+                  end
+          end,
     %% Must be *VERY* careful to put rules in correct order!
-    {ok,NextLine,reverse(REAs),reverse(As),St}.
+    {ok,NextLine,reverse(REAs),reverse(As),St1}.
 
 %% collect_rule(File, Line, Lineno) ->
 %%      {ok,RegExp,ActionTokens,NewLineno} | {error,E}.
@@ -518,22 +578,22 @@ collect_action(Ifile, Chars, L0, Cont0) ->
 
 parse_rule(S, Line, [{dot,_}], Ms, N, St) ->
     case parse_rule_regexp(S, Ms, St) of
-        {ok,R} ->
-            {ok,{R,N},{N,empty_action},St};
-        {error,E} ->
-            add_error({Line,leex,E}, St)
+        {ok,R,St1} ->
+            {ok,{R,N},{N,empty_action},St1};
+        {error,E,St1} ->
+            add_error({Line,leex,E}, St1)
     end;
 parse_rule(S, Line, Atoks, Ms, N, St) ->
     case parse_rule_regexp(S, Ms, St) of
-        {ok,R} ->
+        {ok,R,St1} ->
             %%io:fwrite("RE = ~p~n", [R]),
             %% Check for token variables.
             TokenChars = var_used('TokenChars', Atoks),
             TokenLen = var_used('TokenLen', Atoks),
             TokenLine = var_used('TokenLine', Atoks),
-            {ok,{R,N},{N,Atoks,TokenChars,TokenLen,TokenLine},St};
-        {error,E} ->
-            add_error({Line,leex,E}, St)
+            {ok,{R,N},{N,Atoks,TokenChars,TokenLen,TokenLine},St1};
+        {error,E,St1} ->
+            add_error({Line,leex,E}, St1)
     end.
 
 var_used(Name, Toks) ->
@@ -543,19 +603,24 @@ var_used(Name, Toks) ->
     end.
 
 %% parse_rule_regexp(RegExpString, Macros, State) ->
-%%     {ok,RegExp} | {error,Error}.
+%%     {ok,RegExp,State} | {error,Error,State}.
 %% Substitute in macros and parse RegExpString. Cannot use re:replace
 %% here as it uses info in replace string (&).
 
 parse_rule_regexp(RE0, [{M,Exp}|Ms], St) ->
     Split= re:split(RE0, "\\{" ++ M ++ "\\}", [{return,list},unicode]),
-    RE1 = string:join(Split, Exp),
-    parse_rule_regexp(RE1, Ms, St);
+    case string:join(Split, Exp) of
+        RE0 ->
+            parse_rule_regexp(RE0, Ms, St);
+        RE1 ->
+            St1 = St#leex{used_macros=[M | lists:delete(M, St#leex.used_macros)]},
+            parse_rule_regexp(RE1, Ms, St1)
+    end;
 parse_rule_regexp(RE, [], St) ->
     %%io:fwrite("RE = ~p~n", [RE]),
     case re_parse(RE, St) of
-        {ok,R} -> {ok,R};
-        {error,E} -> {error,{regexp,E}}
+        {ok,R} -> {ok,R,St};
+        {error,E} -> {error,{regexp,E},St}
     end.
 
 %% parse_code(File, Line, State) -> {ok,Code,NewState}.
@@ -748,7 +813,7 @@ re_char($\\, [O1,O2,O3|S]) when
     {(O1*8 + O2)*8 + O3 - 73*$0,S};
 re_char($\\, [$x,H1,H2|S]) when ?IS_HEX(H1), ?IS_HEX(H2) ->
     {erlang:list_to_integer([H1,H2], 16),S};
-re_char($\\,[$x,${|S0]) -> 
+re_char($\\,[$x,${|S0]) ->
     re_hex(S0, []);
 re_char($\\,[$x|_]) ->
     parse_error({illegal_char,"\\x"});
@@ -757,7 +822,7 @@ re_char($\\, []) -> parse_error({unterminated,"\\"});
 re_char(C, S) -> {C,S}.                         % Just this character
 
 re_hex([C|Cs], L) when ?IS_HEX(C) -> re_hex(Cs, [C|L]);
-re_hex([$}|S], L0) -> 
+re_hex([$}|S], L0) ->
     L = lists:reverse(L0),
     case erlang:list_to_integer(L, 16) of
         C when C =< 16#10FFFF -> {C,S};
@@ -1299,7 +1364,7 @@ out_file(St0, DFA, DF, Actions, Code) ->
                 case file:open(St0#leex.efile, [write]) of
                     {ok,Ofile} ->
                         set_encoding(St0, Ofile),
-                        try 
+                        try
                             output_encoding_comment(Ofile, St0),
                             output_file_directive(Ofile, St0#leex.ifile, 0),
                             out_file(Ifile, Ofile, St0, DFA, DF, Actions,
@@ -1332,7 +1397,7 @@ inc_file_name([]) ->
     filename:join(Incdir, ?LEEXINC);
 inc_file_name(Filename) ->
     Filename.
-                    
+
 %% out_file(IncFile, OutFile, State, DFA, DfaStart, Actions, Code, Line) -> ok
 %%  Copy the include file line by line substituting special lines with
 %%  generated code. We cheat by only looking at the first 5
@@ -1364,7 +1429,7 @@ out_erlang_code(File, St, Code, L) ->
         set_encoding(St, Xfile),
         {ok,_} = file:position(Xfile, CodePos),
         ok = file_copy(Xfile, File)
-    after 
+    after
         ok = file:close(Xfile)
     end,
     io:nl(File),
@@ -1554,7 +1619,7 @@ out_action_code(File, XrlFile, {_A,Code,_Vars,Name,Args,ArgsChars}) ->
 %%  Prints the tokens keeping the line breaks of the original code.
 
 pp_tokens(Tokens, Line0) -> pp_tokens(Tokens, Line0, none).
-    
+
 pp_tokens([], _Line0, _) -> [];
 pp_tokens([T | Ts], Line0, Prev) ->
     Line = erl_scan:line(T),
@@ -1565,7 +1630,7 @@ pp_symbol({_,_,Symbol}) -> io_lib:fwrite("~p", [Symbol]);
 pp_symbol({dot, _}) -> ".";
 pp_symbol({Symbol, _}) -> atom_to_list(Symbol).
 
-pp_sep(Line, Line0, Prev, T) when Line > Line0 -> 
+pp_sep(Line, Line0, Prev, T) when Line > Line0 ->
     ["\n    " | pp_sep(Line - 1, Line0, Prev, T)];
 pp_sep(_, _, {'.',_}, _) -> "";        % No space after '.' (not a dot)
 pp_sep(_, _, {'#',_}, _) -> "";        % No space after '#'
@@ -1608,7 +1673,7 @@ out_dfa_state(File, DF, #dfa_state{no=DF, accept={accept,_}}) ->
 out_dfa_state(File, DF, #dfa_state{no=DF, accept=noaccept}) ->
     io:fwrite(File, "  ~b [shape=circle color=green];~n", [DF]);
 out_dfa_state(File, _, #dfa_state{no=S, accept={accept,_}}) ->
-    io:fwrite(File, "  ~b [shape=doublecircle];~n", [S]);    
+    io:fwrite(File, "  ~b [shape=doublecircle];~n", [S]);
 out_dfa_state(File, _, #dfa_state{no=S, accept=noaccept}) ->
     io:fwrite(File, "  ~b [shape=circle];~n", [S]).
 
